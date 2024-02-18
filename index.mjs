@@ -1,42 +1,49 @@
 import http from 'node:http';
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import formidable from 'formidable';
 import { imgToLatex, latexToSpeech } from './apis.js';
 
-const server = http.createServer((req, res) => {
-  console.log("Request Recieved");
+// Start server
+const server = http.createServer(async (req, res) => {
+  console.log("Request Received");
 
   // Check API endpoint
   if (req.url === '/api/upload' && req.method.toLowerCase() === 'post') {
     const form = formidable({});
 
     // Get image file
-    form.parse(req, async (err, fields, files) => {
-      if (err) {
-        res.writeHead(err.httpCode || 400, { 'Content-Type': 'text/plain' });
-        res.end(String(err));
-        return;
-      }
+    try {
+      const { fields, files } = await new Promise((resolve, reject) => {
+        form.parse(req, (err, fields, files) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve({ fields, files });
+          }
+        });
+      });
 
       console.log("File Info:\n" + files.photo[0].filepath);
 
-      // Add file to correct directory
-      await fs.rename(files.photo[0].filepath, './equation.jpg', (err) => {
-        if (err) throw err;
-        console.log("File Successfully Saved");
-      });
+      // Add file to the correct directory
+      await fs.rename(files.photo[0].filepath, './math.jpg');
       
+      // Convert file to LaTeX
       let latex = await imgToLatex();
       let latexString = latex.data.latex_simplified;
       console.log("Latex: " + latexString);
 
+      // Convert to speakable format
       let speech = await latexToSpeech(latexString);
       console.log(speech);
 
-      // Return API info
-      await res.writeHead(200, { 'Content-Type': 'application/json' });
-      await res.end(JSON.stringify({ latexString, speech }, null, 2));
-    });
+      // Return information
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ latexString, speech }, null, 2));
+    } catch (err) {
+      res.writeHead(err.httpCode || 400, { 'Content-Type': 'text/plain' });
+      res.end(String(err));
+    }
 
     return;
   }

@@ -11,12 +11,6 @@ const OPENAI_KEY = process.env.OPENAI_KEY
 // Set up GPT
 const openai = new OpenAI({apiKey: OPENAI_KEY});
 
-// Path of image file
-const imagePath = './math.jpg';
-
-// Read the image file as a base64-encoded string
-const imageBase64 = fs.readFileSync(imagePath, { encoding: 'base64' });
-
 // Mathpix API endpoint
 const apiUrl = 'https://api.mathpix.com/v3/latex';
 
@@ -27,17 +21,24 @@ const headers = {
   'Content-type': 'application/json',
 };
 
-// Prepare the request payload
-const data = {
-  src: `data:image/jpg;base64,${imageBase64}`,
-  formats: ['latex_simplified'],
-};
 async function imgToLatex() {
   // Check if credentials are provided
   if (!APP_ID || !APP_KEY) {
     console.error('Please provide valid Mathpix API credentials in the .env file.');
     throw new Error('Please provide valid Mathpix API credentials in the .env file.');
   }
+
+  // Path of image file
+  const imagePath = './math.jpg';
+
+  // Read the image file as a base64-encoded string
+  const imageBase64 = fs.readFileSync(imagePath, { encoding: 'base64' });
+
+  // Prepare the request payload
+  const data = {
+    src: `data:image/jpg;base64,${imageBase64}`,
+    formats: ['latex_simplified'],
+  };
 
   // Make the HTTP POST request to Mathpix API
   response = await axios.post(apiUrl, data, { headers })
